@@ -3,6 +3,7 @@ name: Deploy Alt+Tab
 on:
   push:
     branches: [principal]
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
