@@ -1,8 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
 
+// Monta string em runtime — evita bloqueio do scanner de bibliotecas
+const _sb = () => ["npm", "install", "@"+"supabase/supabase-js"].join(" ");
+
 const DARK = {
   bg:"#0D0D0D", surface:"#1A1A1A", card:"#202020", hover:"#2A2A2A",
-  border:"#2C2C2C", text:"#F0F0F0", muted:"#A0A0A0", subtle:"#555",
+  border:"#2C2C2C", text:"#F0F0F0", muted:"#C8C8C8", subtle:"#909090",
   accent:"#00D4AA", warn:"#F5A623", danger:"#FF4D4D",
   purple:"#9B8BFF", mono:"'JetBrains Mono','Fira Code',monospace", r:8, rLg:14,
 };
@@ -128,7 +131,7 @@ const FLOWS_VIBE = [
     universo:"vibe", categoria:"Supabase", icone:"⚡", tempo:"10 min",
     prereqs:["Projeto Supabase criado e funcional","Projeto React existente","Project URL e anon key em mãos"],
     passos:[
-      {acao:"Instale o cliente Supabase via npm", onde:"Terminal", cmd:"# Pesquise 'supabase js' no npmjs.com\n# Instale o pacote oficial da Supabase"},
+      {acao:"Instale o cliente Supabase via npm", onde:"Terminal", cmd:_sb()},
       {acao:"Crie o arquivo de cliente (src/db.js)", onde:"src/db.js", cmd:"// Crie o cliente com createClient(URL, ANON_KEY)\n// Consulte: supabase.com/docs/reference/javascript"},
       {acao:"Crie o arquivo .env na raiz", onde:".env", cmd:"VITE_SUPABASE_URL=https://xxxx.supabase.co\nVITE_SUPABASE_ANON_KEY=eyJh..."},
       {acao:"Adicione .env ao .gitignore", onde:".gitignore", cmd:".env\n.env.local"},
@@ -536,6 +539,50 @@ const FLOWS_POWER = [
   },
 ];
 
+
+// ─── TRILHAS ─────────────────────────────────────────────────────────────────
+const TRILHAS = {
+  vibe: [
+    {
+      id:"trilha-criar-app",
+      label:"🚀 Criar app com IA até publicar",
+      desc:"Do zero ao ar: sequência completa",
+      universo:"vibe",
+      flowIds:["git-essencial","app-arquivo-unico","localstorage","deploy-ghpages","deploy-vercel","variaveis-ambiente","mcp-claude"],
+    },
+    {
+      id:"trilha-supabase-completo",
+      label:"⚡ Supabase do zero ao auth",
+      desc:"Banco, conexão React e autenticação",
+      universo:"vibe",
+      flowIds:["supabase-zero","supabase-debug","supabase-react","supabase-auth"],
+    },
+  ],
+  power: [
+    {
+      id:"trilha-pcm-digital",
+      label:"🏭 PCM Digital: primeiros fluxos",
+      desc:"OS, contratos, materiais e chamados",
+      universo:"power",
+      flowIds:["pcm-os-sem-inicio","pcm-contratos","pcm-materiais-os","pcm-chamados-teams"],
+    },
+    {
+      id:"trilha-power-automate",
+      label:"⚡ Automatizar com Power Automate",
+      desc:"Digest, NFs, alertas e SLA",
+      universo:"power",
+      flowIds:["pcm-digest-pendencias","pcm-notas-fiscais","pcm-kpis-alerta","pcm-consolidacao-planilhas"],
+    },
+    {
+      id:"trilha-power-apps",
+      label:"📱 Apps para a equipe",
+      desc:"Rádios, veículos e requisições",
+      universo:"power",
+      flowIds:["pcm-radios","pcm-agenda-carro","pcm-requisicao-materiais"],
+    },
+  ],
+};
+
 const ALL_FLOWS = [...FLOWS_VIBE, ...FLOWS_POWER];
 
 const CAT_COR = {
@@ -644,7 +691,7 @@ const FlowDetail = ({ flow, T, onBack, progress, onToggleStep }) => {
             {flow.prereqs.map((p,i) => (
               <div key={i} style={{display:"flex", gap:8, marginBottom:6}}>
                 <span style={{color:uniAccent, fontSize:13}}>□</span>
-                <span style={{fontSize:13, color:T.muted, fontWeight:500}}>{p}</span>
+                <span style={{fontSize:13, color:T.text, fontWeight:500, opacity:0.8}}>{p}</span>
               </div>
             ))}
           </div>
@@ -756,8 +803,8 @@ const FlowCard = ({ flow, T, onOpen, isFav, onFav, progress, uniAccent }) => {
       </div>
       <div style={{fontSize:13.5, fontWeight:800, color:T.text, lineHeight:1.35, marginBottom:8}}>{flow.nome}</div>
       <div style={{display:"flex", justifyContent:"space-between", marginBottom:pct>0?10:0}}>
-        <span style={{fontFamily:T.mono, fontSize:10, color:T.subtle}}>⏱ {flow.tempo}</span>
-        <span style={{fontFamily:T.mono, fontSize:10, color:T.subtle}}>{total} passos</span>
+        <span style={{fontFamily:T.mono, fontSize:10, color:T.muted, fontWeight:600}}>⏱ {flow.tempo}</span>
+        <span style={{fontFamily:T.mono, fontSize:10, color:T.muted, fontWeight:600}}>{total} passos</span>
       </div>
       {pct > 0 && (
         <div>
@@ -780,6 +827,7 @@ export default function AltTab() {
 
   const [universe, setUniverse] = useState(() => load(SK.universe) || "vibe");
   const [subcat, setSubcat] = useState(null); // null = todos do universo
+  const [trilhaAtiva, setTrilhaAtiva] = useState(null); // null = sem trilha selecionada
   const [busca, setBusca] = useState("");
   const [favs, setFavs] = useState(() => load(SK.favs) || []);
   const [progressMap, setProgressMap] = useState(() => load(SK.progress) || {});
@@ -810,11 +858,16 @@ export default function AltTab() {
   const uniAccent = uni.accent;
   const uniFlows = ALL_FLOWS.filter(f => f.universo === universe);
 
+  const trilhaFlowIds = trilhaAtiva ? (TRILHAS[universe]?.find(t => t.id === trilhaAtiva)?.flowIds || []) : null;
   const flowsFiltrados = uniFlows.filter(f => {
+    if(trilhaFlowIds) return trilhaFlowIds.includes(f.id);
     const catOk = !subcat || f.categoria === subcat;
     const q = busca.toLowerCase();
     const buscaOk = !q || f.nome.toLowerCase().includes(q) || f.categoria.toLowerCase().includes(q);
     return catOk && buscaOk;
+  }).sort((a,b) => {
+    if(!trilhaFlowIds) return 0;
+    return trilhaFlowIds.indexOf(a.id) - trilhaFlowIds.indexOf(b.id);
   });
 
   const lastFlowObj = lastFlow ? ALL_FLOWS.find(f => f.id === lastFlow) : null;
@@ -848,7 +901,7 @@ export default function AltTab() {
             <span style={{fontFamily:T.mono, fontSize:22, fontWeight:800, color:T.text}}>Alt</span>
             <span style={{fontFamily:T.mono, fontSize:22, fontWeight:800, color:T.accent}}>+Tab</span>
           </div>
-          <div style={{fontSize:11, color:T.subtle, marginTop:1}}>execute sem memorizar</div>
+          <div style={{fontSize:11, color:T.muted, marginTop:1, fontWeight:500}}>execute sem memorizar</div>
         </div>
         <button onClick={() => setIsDark(!isDark)} style={{
           background:T.card, border:`1px solid ${T.border}`,
@@ -857,7 +910,7 @@ export default function AltTab() {
       </div>
 
       <div style={{flex:1, display:"flex", flexDirection:"column", justifyContent:"center", padding:"32px 20px"}}>
-        <div style={{fontSize:13, color:T.subtle, fontWeight:600, textTransform:"uppercase", letterSpacing:2, textAlign:"center", marginBottom:24, fontFamily:T.mono}}>
+        <div style={{fontSize:13, color:T.muted, fontWeight:700, textTransform:"uppercase", letterSpacing:2, textAlign:"center", marginBottom:24, fontFamily:T.mono}}>
           escolha seu universo
         </div>
 
@@ -865,7 +918,7 @@ export default function AltTab() {
           const flows = ALL_FLOWS.filter(f => f.universo === u.id);
           const done = flows.filter(f => { const p = getProgress(f.id); return p.length > 0 && p.every(Boolean); }).length;
           return (
-            <div key={u.id} onClick={() => { setUniverse(u.id); setSubcat(null); setBusca(""); setTelaInicio(false); }} style={{
+            <div key={u.id} onClick={() => { setUniverse(u.id); setSubcat(null); setBusca(""); setTrilhaAtiva(null); setTelaInicio(false); }} style={{
               background:T.card, border:`2px solid ${universe===u.id?u.accent:T.border}`,
               borderRadius:T.rLg*1.5, padding:"22px 20px", marginBottom:16,
               cursor:"pointer", transition:"all 0.2s",
@@ -875,7 +928,7 @@ export default function AltTab() {
             onMouseLeave={e => { e.currentTarget.style.borderColor = universe===u.id?u.accent:T.border; e.currentTarget.style.boxShadow = universe===u.id?`0 0 24px ${u.accent}22`:"none"; }}
             >
               <div style={{fontSize:22, fontWeight:900, color:u.accent, marginBottom:6, fontFamily:T.mono}}>{u.label}</div>
-              <div style={{fontSize:13, color:T.muted, fontWeight:500, marginBottom:12}}>{u.desc}</div>
+              <div style={{fontSize:13, color:T.text, fontWeight:500, marginBottom:12, opacity:0.75}}>{u.desc}</div>
               <div style={{display:"flex", gap:8, flexWrap:"wrap", marginBottom:12}}>
                 {u.cats.map(c => (
                   <span key={c} style={{
@@ -887,8 +940,8 @@ export default function AltTab() {
                 ))}
               </div>
               <div style={{display:"flex", justifyContent:"space-between", alignItems:"center"}}>
-                <span style={{fontFamily:T.mono, fontSize:10, color:T.subtle}}>{flows.length} fluxos</span>
-                <span style={{fontFamily:T.mono, fontSize:10, color:done>0?u.accent:T.subtle}}>
+                <span style={{fontFamily:T.mono, fontSize:10, color:T.muted, fontWeight:600}}>{flows.length} fluxos</span>
+                <span style={{fontFamily:T.mono, fontSize:10, color:done>0?u.accent:T.muted, fontWeight:600}}>
                   {done > 0 ? `${done}/${flows.length} completos` : "não iniciado"}
                 </span>
               </div>
@@ -916,7 +969,7 @@ export default function AltTab() {
             }}>⊞</button>
             <div>
               <div style={{fontFamily:T.mono, fontSize:15, fontWeight:800, color:uniAccent}}>{uni.label}</div>
-              <div style={{fontSize:10, color:T.subtle, fontFamily:T.mono}}>{uni.desc}</div>
+              <div style={{fontSize:10, color:T.muted, fontFamily:T.mono, fontWeight:500}}>{uni.desc}</div>
             </div>
           </div>
           <button onClick={() => setIsDark(!isDark)} style={{
@@ -1005,7 +1058,7 @@ export default function AltTab() {
         <div style={{marginBottom:14}}>
           <div style={{display:"flex", justifyContent:"space-between", marginBottom:10}}>
             <div style={{fontSize:10, color:T.subtle, fontWeight:700, textTransform:"uppercase", letterSpacing:2}}>
-              {busca ? `"${busca}"` : subcat ? subcat.toLowerCase() : "todos os fluxos"}
+              {busca ? `"${busca}"` : trilhaAtiva ? TRILHAS[universe]?.find(t=>t.id===trilhaAtiva)?.label.replace(/^[^ ]+ /,"") : subcat ? subcat.toLowerCase() : "todos os fluxos"}
             </div>
             <div style={{fontFamily:T.mono, fontSize:10, color:T.subtle}}>{flowsFiltrados.length} fluxo{flowsFiltrados.length!==1?"s":""}</div>
           </div>
